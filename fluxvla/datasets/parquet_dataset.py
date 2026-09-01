@@ -647,9 +647,11 @@ class PrivateInferenceDataset:
         self.use_quantiles = use_quantiles
         self.embodiment_id = embodiment_id
         self.extra_tensor_keys = extra_tensor_keys or []
+        self.last_raw_state: Optional[np.ndarray] = None
 
     def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Process the observation for evaluation."""
+        self.last_raw_state = np.asarray(data['qpos'], dtype=np.float32).copy()
         imgs = list()
         for img_key in self.img_keys:
             if img_key not in data:
