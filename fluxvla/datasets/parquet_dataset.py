@@ -616,6 +616,9 @@ class PrivateInferenceDataset:
             Defaults to 180.
         use_quantiles (bool): Whether to use quantiles for normalization.
             Defaults to True.
+        statistic_name (str): Key of ``norm_stats`` holding the statistics
+            the model was trained with (the training ``statistic_name``).
+            Defaults to 'private'.
     """
 
     def __init__(self,
@@ -628,8 +631,10 @@ class PrivateInferenceDataset:
                  max_len: int = 180,
                  use_quantiles=True,
                  embodiment_id: int = None,
-                 extra_tensor_keys: Optional[List[str]] = None) -> None:
+                 extra_tensor_keys: Optional[List[str]] = None,
+                 statistic_name: str = 'private') -> None:
         from fluxvla.engines import build_transform_from_cfg
+        self.statistic_name = str(statistic_name)
         self.transforms = list()
         for transform in transforms:
             transform = dict(transform)
@@ -662,7 +667,7 @@ class PrivateInferenceDataset:
             images=imgs,
             task_description=data.get('task_description',
                                       'No task description provided'),
-            stats=self.norm_stats['private'],
+            stats=self.norm_stats[self.statistic_name],
             states=data['qpos'])
         if self.embodiment_id is not None:
             inputs['embodiment_ids'] = np.array(
