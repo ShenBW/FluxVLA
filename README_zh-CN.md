@@ -5,6 +5,7 @@
 </p>
 
 <div align="center">
+<a href="https://arxiv.org/abs/2609.17210"><img src="https://img.shields.io/badge/arXiv-2609.17210-b31b1b" alt="arXiv"></a>
 <a href="https://huggingface.co/limxdynamics/FluxVLAEngine"><img src="https://img.shields.io/badge/HuggingFace-yellow?logo=huggingface&logoColor=white" alt="Hugging Face"></a>
 <a href="https://fluxvla.limxdynamics.com"><img src="https://img.shields.io/badge/Documentation-Purple?color=8A2BE2&logo=readthedocs"></a>
 <a href="https://fluxvla.limxdynamics.com/zh/"><img src="https://img.shields.io/badge/中文文档-red?logo=readthedocs"></a>
@@ -28,28 +29,32 @@ FluxVLA Engine是面向具身智能落地应用的全链路一体化工程平台
 
 ## 性能
 
-| Codebase                    |                                                     Libero-Spatial                                                      |                                                      Libero-Object                                                      |                                                      Libero-Goal                                                      |                                                     Libero-Long                                                     |                                                Libero-Average                                                |
-| --------------------------- | :---------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------: |
-| FluxVLA(SmolVLA)            |      [86.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_spatial_full_finetune_bs64)      |      [92.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_object_full_finetune_bs64)       |      [91.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_goal_full_finetune_bs64)       |      [68.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_10_full_finetune_bs64)       |                                                     84.7                                                     |
-| FluxVLA(Cosmos3-Edge)       |                                                          95.6                                                           |                                                          95.6                                                           |                                                         91.6                                                          |                                                        94.8                                                         | [94.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/cosmos3_edge_libero_full_finetune_bs2048) |
-| FluxVLA(GR00T)              |  [97.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_spatial_full_finetune_bs64)   |   [96.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_object_full_finetune_bs64)   |   [94.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_goal_full_finetune_bs64)   | [93.0±1.5](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_10_full_finetune_bs64) |                                                     95.3                                                     |
-| FluxVLA(Qwen3VL 0.6B+GR00T) | [96.0](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_object_full_finetune_bs64) | [99.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_object_full_finetune_bs64) | [95.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_goal_full_finetune_bs64) | [94.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_10_full_finetune_bs64) |                                                    96.20                                                     |
-| FluxVLA(DreamZero)          | [98.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_spatial_full_finetune_w_cache_bs64) | [98.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_object_full_finetune_w_cache_bs64)  | [93.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_goal_full_finetune_w_cache_bs64)  | [94.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_10_full_finetune_w_cache_bs64)  |                                                    96.25                                                     |
-| FluxVLA(PI0)                |   [98.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_spatial_full_finetune_bs64)   |   [98.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_object_full_finetune_bs64)    |   [96.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_goal_full_finetune_bs64)    |   [93.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_10_full_finetune_bs64)    |                                                    96.85                                                     |
-| FluxVLA(Cosmos3-Nano)       |                                                          96.0                                                           |                                                          99.6                                                           |                                                         94.0                                                          |                                                        98.0                                                         | [96.9](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/cosmos3_nano_libero_full_finetune_bs2048) |
-| FluxVLA(FastWAM)            |                                                          96.6                                                           |                                                          99.4                                                           |                                                         97.6                                                          |                                                        96.2                                                         |    [97.45](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/fastwam_libero_full_finetune_bs16)    |
-| FluxVLA(PI0.5)              |  [98.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_spatial_full_finetune_bs64)   |   [99.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_object_full_finetune_bs64)   |   [98.0](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_goal_full_finetune_bs64)   | [95.6±1.0](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_10_full_finetune_bs64) |                                                    97.95                                                     |
-| FluxVLA(FastWAM-IDM)        |                                                          99.8                                                           |                                                          98.0                                                           |                                                         98.4                                                          |                                                        96.2                                                         |  [98.10](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/fastwam_idm_libero_full_finetune_bs16)  |
-| FluxVLA(FastWAM-Joint)      |                                                          99.2                                                           |                                                          98.8                                                           |                                                         99.6                                                          |                                                        95.8                                                         | [98.35](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/fastwam_joint_libero_full_finetune_bs16) |
-| FluxVLA(DiT4DiT)            |                                                          96.20                                                          |                                                          99.60                                                          |                                                         99.20                                                         |                                                        99.60                                                        | [98.65](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dit4dit_libero_all_full_finetune_bs256)  |
+| Codebase                         |                                                     Libero-Spatial                                                      |                                                      Libero-Object                                                      |                                                      Libero-Goal                                                      |                                                      Libero-Long                                                      |                                                Libero-Average                                                |
+| -------------------------------- | :---------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------: |
+| FluxVLA(SmolVLA)                 |      [86.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_spatial_full_finetune_bs64)      |      [92.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_object_full_finetune_bs64)       |      [91.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_goal_full_finetune_bs64)       |       [68.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/smolvla_libero_10_full_finetune_bs64)        |                                                     84.7                                                     |
+| FluxVLA(Cosmos3-Edge)            |                                                          95.6                                                           |                                                          95.6                                                           |                                                         91.6                                                          |                                                         94.8                                                          | [94.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/cosmos3_edge_libero_full_finetune_bs2048) |
+| FluxVLA(GR00T N1.5)              |  [97.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_spatial_full_finetune_bs64)   |   [96.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_object_full_finetune_bs64)   |   [94.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_goal_full_finetune_bs64)   |  [93.0±1.5](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_libero_10_full_finetune_bs64)  |                                                     95.3                                                     |
+| FluxVLA(GR00T N1.7)              | [96.5](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_n17_native_libero_spatial_full_finetune_bs64)  |  [97.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_n17_native_libero_object_full_finetune_bs64)  |  [97.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_n17_native_libero_goal_full_finetune_bs64)  | [92.0±1.0](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_n17_native_libero_10_full_finetune_bs64) |                                                    95.93                                                     |
+| FluxVLA(Qwen3VL 0.6B+GR00T N1.5) | [96.0](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_object_full_finetune_bs64) | [99.4](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_object_full_finetune_bs64) | [95.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_goal_full_finetune_bs64) |  [94.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_qwen3vl_0.6b_libero_10_full_finetune_bs64)  |                                                    96.20                                                     |
+| FluxVLA(DreamZero)               | [98.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_spatial_full_finetune_w_cache_bs64) | [98.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_object_full_finetune_w_cache_bs64)  | [93.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_goal_full_finetune_w_cache_bs64)  |  [94.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dreamzero_libero_10_full_finetune_w_cache_bs64)   |                                                    96.25                                                     |
+| FluxVLA(PI0)                     |   [98.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_spatial_full_finetune_bs64)   |   [98.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_object_full_finetune_bs64)    |   [96.8](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_goal_full_finetune_bs64)    |    [93.2](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_libero_10_full_finetune_bs64)     |                                                    96.85                                                     |
+| FluxVLA(Cosmos3-Nano)            |                                                          96.0                                                           |                                                          99.6                                                           |                                                         94.0                                                          |                                                         98.0                                                          | [96.9](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/cosmos3_nano_libero_full_finetune_bs2048) |
+| FluxVLA(FastWAM)                 |                                                          96.6                                                           |                                                          99.4                                                           |                                                         97.6                                                          |                                                         96.2                                                          |    [97.45](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/fastwam_libero_full_finetune_bs16)    |
+| FluxVLA(PI0.5)                   |  [98.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_spatial_full_finetune_bs64)   |   [99.6](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_object_full_finetune_bs64)   |   [98.0](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_goal_full_finetune_bs64)   |  [95.6±1.0](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_libero_10_full_finetune_bs64)  |                                                    97.95                                                     |
+| FluxVLA(FastWAM-IDM)             |                                                          99.8                                                           |                                                          98.0                                                           |                                                         98.4                                                          |                                                         96.2                                                          |  [98.10](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/fastwam_idm_libero_full_finetune_bs16)  |
+| FluxVLA(FastWAM-Joint)           |                                                          99.2                                                           |                                                          98.8                                                           |                                                         99.6                                                          |                                                         95.8                                                          | [98.35](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/fastwam_joint_libero_full_finetune_bs16) |
+| FluxVLA(DiT4DiT)                 |                                                          96.20                                                          |                                                          99.60                                                          |                                                         99.20                                                         |                                                         99.60                                                         | [98.65](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dit4dit_libero_all_full_finetune_bs256)  |
 
 #### RoboCasa GR1
 
-| 模型           | 训练数据             | Cabinet | Drawer | Microwave | Generalization | Average                                                                                                                                         |
-| -------------- | -------------------- | ------- | ------ | --------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| FluxVLA(GR00T) | 24 个任务，30 条演示 | 22.7%   | 35.7%  | 32.5%     | 48.9%          | [44.3%(50trials)](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_robocasa_gr1_24x30_finetune_bs64)                  |
-| FluxVLA(PI0)   | 24 个任务，全量数据  | 60.00%  | 56.00% | 48.00%    | 49.33%         | [51.00%（每任务 50 次试验）](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_robocasa_full_data_full_finetune_bs256)  |
-| FluxVLA(PI0.5) | 24 个任务，全量数据  | 60.00%  | 51.00% | 52.00%    | 50.44%         | [51.42%（每任务 50 次试验）](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_robocasa_full_data_full_finetune_bs256) |
+| 模型                | 训练数据             | Cabinet | Drawer | Microwave | Generalization | Average                                                                                                                                         |
+| ------------------- | -------------------- | ------- | ------ | --------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| FluxVLA(GR00T N1.5) | 24 个任务，30 条演示 | 22.7%   | 35.7%  | 32.5%     | 48.9%          | [44.3%(50trials)](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_eagle_3b_robocasa_gr1_24x30_finetune_bs64)                  |
+| FluxVLA(GR00T N1.7) | 24 个任务，全量数据  | 53.00%  | 51.00% | 47.00%    | 45.11%         | [46.42%（每任务 50 次试验）](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/gr00t_n17_native_robocasa_full_finetune_bs512)         |
+| FluxVLA(FastWAM)    | 24 个任务，全量数据  | 55.00%  | 47.00% | 47.00%    | 50.00%         | [49.92%（每任务 50 次试验）](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/fastwam_robocasa_full_data_full_finetune_bs256)        |
+| FluxVLA(PI0)        | 24 个任务，全量数据  | 60.00%  | 56.00% | 48.00%    | 49.33%         | [51.00%（每任务 50 次试验）](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi0_paligemma_robocasa_full_data_full_finetune_bs256)  |
+| FluxVLA(PI0.5)      | 24 个任务，全量数据  | 60.00%  | 51.00% | 52.00%    | 50.44%         | [51.42%（每任务 50 次试验）](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/pi05_paligemma_robocasa_full_data_full_finetune_bs256) |
+| FluxVLA(DiT4DiT)    | 24 个任务，全量数据  | 63.00%  | 52.00% | 59.00%    | 57.00%         | [57.25%（每任务 50 次试验）](https://huggingface.co/limxdynamics/FluxVLAEngine/tree/main/dit4dit_robocasa_full_data_full_finetune_bs64)         |
 
 #### 说明
 
@@ -59,7 +64,22 @@ FluxVLA Engine是面向具身智能落地应用的全链路一体化工程平台
 - `Generalization`：剩余的 18 个后训练新任务。
 - RoboCasa 结果均使用每个任务 50 次试验评测。
 
+#### RoboDojo
+
+RoboDojo 完整评测覆盖 42 个基准任务：30 个独立任务各进行 50 次试验；12 个泛化任务各包含 25 次标准布局和 25 次随机布局试验。因此，每个模型共评测 2,100 个 episode。指标格式为：进度分数 / 成功率（%）。模型按平均进度分数升序排列。
+
+| 模型                |           平均 | 标准泛化（Gen-Std） | 随机泛化（Gen-Rand） |            精度 |          长时程 |          记忆 |      开放任务 |
+| ------------------- | -------------: | ------------------: | -------------------: | --------------: | --------------: | ------------: | ------------: |
+| FluxVLA(SmolVLA)    |  5.29% / 2.98% |       8.15% / 5.33% |        0.30% / 0.00% |   8.70% / 4.50% |   8.89% / 4.75% | 3.97% / 2.33% | 0.67% / 0.67% |
+| FluxVLA(GR00T N1.5) |  5.50% / 3.17% |       6.48% / 3.33% |        1.62% / 0.67% |   2.38% / 0.00% |  15.36% / 9.25% | 5.48% / 4.33% | 0.25% / 0.25% |
+| FluxVLA(PI0)        |  5.96% / 3.37% |      13.05% / 9.67% |        0.78% / 0.00% |   7.62% / 4.00% |  11.76% / 6.00% | 3.52% / 2.00% | 0.00% / 0.00% |
+| FluxVLA(PI0.5)      | 13.61% / 8.83% |     22.65% / 16.00% |        6.25% / 2.33% | 18.28% / 10.25% | 28.04% / 18.75% | 5.10% / 4.00% | 2.20% / 2.00% |
+
 ## 📢 最新动态
+
+**\[2026/09/09\]** 🔥 FluxVLA 现已支持通过 OpenAI Responses API 使用 GPT-6 Astra 进行无需 checkpoint 的 LIBERO 评测，包括多视角观测、原生 LIBERO 动作控制、环境变量凭据配置和结构化 rollout 产物。
+
+**\[2026/09/09\]** 🔥 FluxVLA-native GR00T N1.7 现已开源，包含 LIBERO、RoboCasa 和 Franka 机器人的训练与推理流程。
 
 **\[2026/08/25\]** 🔥 现已支持 FluxVLA-native DiT4DiT，包含 LIBERO 与 RoboCasa 的训练和推理流程。
 
@@ -318,7 +338,7 @@ scripts/run_docker.sh
 <details>
 <summary><b>RoboCasa GR00T 源码 checkout（可选）</b></summary>
 
-RoboCasa GR00T 配置（如 `configs/gr00t/gr00t_eagle_3b_robocasa_finetune.py`）需要固定版本的 Isaac-GR00T 与 RoboCasa GR1 任务 checkout。一键安装器会在 `sim-only` 和 `full` 模式下默认处理这些源码，并放到 `./src`：
+GR00T N1.5 和 N1.7 配置分别位于 `configs/gr00tn15/` 和 `configs/gr00tn17/`。RoboCasa GR00T N1.5 配置（如 `configs/gr00tn15/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune.py`）需要固定版本的 Isaac-GR00T 与 RoboCasa GR1 任务 checkout。一键安装器会在 `sim-only` 和 `full` 模式下默认处理这些源码，并放到 `./src`：
 
 ```bash
 bash scripts/install_env.sh sim-only
@@ -483,6 +503,7 @@ tensorboard --logdir work_dirs/tensorboard
 | libero-goal             | [limxdynamics/FluxVLAData/libero_goal_no_noops_lerobotv2.1](https://huggingface.co/datasets/limxdynamics/FluxVLAData/tree/main/libero_goal_no_noops_lerobotv2.1)             |
 | RoboCasa GR1 (30 demos) | [limxdynamics/FluxVLAData/robocasa_gr1_24tasks_first30ep](https://huggingface.co/datasets/limxdynamics/FluxVLAData/tree/main/robocasa_gr1_24tasks_first30ep)                 |
 | RoboCasa GR1            | [limxdynamics/FluxVLAData/robocasa_lerobot_V2.1](https://huggingface.co/datasets/limxdynamics/FluxVLAData/tree/main/robocasa_lerobot_V2.1)                                   |
+| RoboDojo                | [RoboDojo-Benchmark/RoboDojo（LeRobot v2.1）](https://huggingface.co/datasets/RoboDojo-Benchmark/RoboDojo/tree/main/data/RoboDojo_lerobot_v21_video)                         |
 | ARM manual test         | [limxdynamics/FluxVLAData/ARM_manual_test_10Episodes_lerobotv3.0](https://huggingface.co/datasets/limxdynamics/FluxVLAData/tree/main/ARM_manual_test_10Episodes_lerobotv3.0) |
 | RealRobot_AgileX_aloha  | [limxdynamics/FluxVLAData/RealRobot_AgileX_aloha_lerobot_v2](https://huggingface.co/datasets/limxdynamics/FluxVLAData/tree/main/RealRobot_AgileX_aloha_lerobot_v2)           |
 | RealRobot_UR3_Chem      | [limxdynamics/FluxVLAData/RealRobot_UR3_Chem_lerobot_v2](https://huggingface.co/datasets/limxdynamics/FluxVLAData/tree/main/RealRobot_UR3_Chem_lerobot_v2)                   |
@@ -918,7 +939,7 @@ RoboCasa GR00T 冒烟训练示例：
 ```bash
 WANDB_MODE=disabled TOKENIZERS_PARALLELISM=false \
 torchrun --standalone --nnodes 1 --nproc-per-node 1 scripts/train.py \
-  --config configs/gr00t/gr00t_eagle_3b_robocasa_finetune.py \
+  --config configs/gr00tn15/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune.py \
   --work-dir work_dirs/smoke_groot_robocasa_train \
   --cfg-options \
     runner.type=FSDPTrainRunner \
@@ -953,7 +974,7 @@ RoboCasa GR00T 评估示例：
 MUJOCO_GL=egl WANDB_MODE=disabled TOKENIZERS_PARALLELISM=false \
 PYTHONHASHSEED=7 \
 torchrun --standalone --nnodes 1 --nproc-per-node 1 scripts/eval.py \
-  --config configs/gr00t/gr00t_eagle_3b_robocasa_finetune.py \
+  --config configs/gr00tn15/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune.py \
   --ckpt-path work_dirs/gr00t_eagle_3b_robocasa_gr1_24x30_finetune_bs64/checkpoints/step-010000.safetensors \
   --cfg-options \
     eval.norm_stats_path=work_dirs/official_groot_gr1_dataset_statistics.json \
@@ -1112,15 +1133,14 @@ pip install numpy==1.26.4
 如果你在学术研究或工程项目中使用了 FluxVLA，欢迎引用以下工作：
 
 ```bibtex
-@software{FluxVLA2026,
-  author  = {Li, Yinhao and Mao, Weixin and Lan, Zihan and Rong, Jikun and Zhu, Minzhao and Mao, Yiming and Shen, Bowen and Huang, Xu},
-  title   = {{FluxVLA Engine: A One-Stop VLA Engineering Platform for Embodied Intelligence}},
-  year    = {2026},
-  month   = apr,
-  version = {1.0.0},
-  doi     = {10.5281/zenodo.20049506},
-  url     = {https://github.com/FluxVLA/FluxVLA},
-  license = {Apache-2.0},
+@misc{li2026fluxvlaengineonestopvla,
+  title={FluxVLA Engine: A One-Stop VLA Engineering Platform for Embodied Intelligence},
+  author={Yinhao Li and Weixin Mao and Zihan Lan and Jikun Rong and Qirui Hu and Yiming Zhang and Weipeng Deng and Bowen Shen and Minzhao Zhu and Yiming Mao and Yan Yang and Chenguang Cui and Hongyuan Chen and Xu Huang and Zheyi Zhao and Pinxi Shen and Bozhen He and Zhen Fu and Yifan Wang and Zexin Zhang and Ang Gao and Haoyu Chen and Chengqi Shi and Hua Chen},
+  year={2026},
+  eprint={2609.17210},
+  archivePrefix={arXiv},
+  primaryClass={cs.RO},
+  url={https://arxiv.org/abs/2609.17210},
 }
 
 @InProceedings{Mao_2026_CVPR,

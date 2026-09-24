@@ -225,8 +225,8 @@ export WANDB_MODE=disabled
 CUDA_VISIBLE_DEVICES=0,1 \
 NPROC_PER_NODE=2 \
 bash scripts/eval.sh \
-  configs/gr00t/gr00t_eagle_3b_robotwin_all_data_full_finetune.py \
-  work_dirs/gr00t_eagle_3b_robotwin_all_data_full_finetune/checkpoints/checkpoints/step-142386-epoch-03-loss=0.0027.safetensors \
+  configs/gr00tn15/gr00tn15_eagle_3b_robotwin_all_data_full_finetune.py \
+  work_dirs/gr00tn15_eagle_3b_robotwin_all_data_full_finetune/checkpoints/checkpoints/step-142386-epoch-03-loss=0.0027.safetensors \
   --cfg-options \
     eval.task_suite_name=random
 ```
@@ -257,8 +257,8 @@ CUDA_VISIBLE_DEVICES=0,1 \
 NPROC_PER_NODE=2 \
 HF_ENDPOINT=https://hf-mirror.com \
 bash scripts/eval.sh \
-  configs/gr00t/gr00t_eagle_3b_robocasa_30_eps_full_finetune.py \
-  work_dirs/gr00t_eagle_3b_robocasa_30_eps_full_finetune/checkpoints/latest-checkpoint.safetensors \
+  configs/gr00tn15/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune.py \
+  work_dirs/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune/checkpoints/latest-checkpoint.safetensors \
   --cfg-options \
     eval.num_trials_per_task=1 \
     eval.max_episode_steps=5
@@ -316,8 +316,8 @@ NPROC_PER_NODE=2 \
 WANDB_MODE=disabled \
 HF_ENDPOINT=https://hf-mirror.com \
 bash scripts/train.sh \
-  configs/gr00t/gr00t_eagle_3b_robotwin_all_data_full_finetune.py \
-  work_dirs/gr00t_eagle_3b_robotwin_all_data_full_finetune \
+  configs/gr00tn15/gr00tn15_eagle_3b_robotwin_all_data_full_finetune.py \
+  work_dirs/gr00tn15_eagle_3b_robotwin_all_data_full_finetune \
   --eval-after-train \
   --cfg-options \
     train_dataloader.per_device_batch_size=1 \
@@ -346,8 +346,8 @@ NPROC_PER_NODE=2 \
 WANDB_MODE=disabled \
 HF_ENDPOINT=https://hf-mirror.com \
 bash scripts/train.sh \
-  configs/gr00t/gr00t_eagle_3b_robocasa_30_eps_full_finetune.py \
-  work_dirs/gr00t_eagle_3b_robocasa_30_eps_full_finetune \
+  configs/gr00tn15/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune.py \
+  work_dirs/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune \
   --eval-after-train \
   --cfg-options \
     train_dataloader.per_device_batch_size=1 \
@@ -374,8 +374,8 @@ NPROC_PER_NODE=2 \
 WANDB_MODE=disabled \
 HF_ENDPOINT=https://hf-mirror.com \
 bash scripts/train.sh \
-  configs/gr00t/gr00t_eagle_3b_libero_10_full_finetune.py \
-  work_dirs/gr00t_eagle_3b_libero_10_full_finetune \
+  configs/gr00tn15/gr00tn15_eagle_3b_libero_10_full_finetune.py \
+  work_dirs/gr00tn15_eagle_3b_libero_10_full_finetune \
   --eval-after-train \
   --cfg-options \
     train_dataloader.per_device_batch_size=1 \
@@ -399,7 +399,7 @@ directory. If both `clean` and `random` are present, both are uploaded.
 ```bash
 cd /path/to/FluxVLA
 
-SUMMARY=$(find work_dirs/gr00t_eagle_3b_robotwin_all_data_full_finetune \
+SUMMARY=$(find work_dirs/gr00tn15_eagle_3b_robotwin_all_data_full_finetune \
   -path '*/EVAL-robotwin-groot-*/summary.json' \
   -printf '%T@ %p\n' | sort -nr | head -2 | cut -d' ' -f2-)
 
@@ -410,7 +410,7 @@ for summary_path in """$SUMMARY""".splitlines():
     result = maybe_report_summary_to_feishu(
         summary_path,
         "robotwin",
-        config="configs/gr00t/gr00t_eagle_3b_robotwin_all_data_full_finetune.py",
+        config="configs/gr00tn15/gr00tn15_eagle_3b_robotwin_all_data_full_finetune.py",
         logger=print,
         log_unconfigured=True,
     )
@@ -423,7 +423,7 @@ You can upload an existing RoboCasa summary without rerunning evaluation:
 ```bash
 cd /path/to/FluxVLA
 
-SUMMARY=$(find work_dirs/gr00t_eagle_3b_robocasa_30_eps_full_finetune \
+SUMMARY=$(find work_dirs/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune \
   -path '*/EVAL-robocasa-groot-*/summary.json' \
   -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
 
@@ -433,7 +433,7 @@ from fluxvla.engines.utils.feishu_reporter import maybe_report_summary_to_feishu
 result = maybe_report_summary_to_feishu(
     "$SUMMARY",
     "robocasa",
-    config="configs/gr00t/gr00t_eagle_3b_robocasa_30_eps_full_finetune.py",
+    config="configs/gr00tn15/gr00tn15_eagle_3b_robocasa_30_eps_full_finetune.py",
     logger=print,
     log_unconfigured=True,
 )

@@ -423,6 +423,26 @@ class DenormalizeRobocasaAction:
         return 0.5 * (action + 1) * (high - low) + low
 
 
+@TRANSFORMS.register_module()
+class IdentityRobocasaAction:
+    """Return native RoboCasa action targets without denormalization."""
+
+    def __init__(self,
+                 norm_stats=None,
+                 action_dim: int = 29,
+                 clip: bool = False) -> None:
+        del norm_stats
+        self.action_dim = int(action_dim)
+        self.clip = bool(clip)
+
+    def __call__(self, data: Dict) -> np.ndarray:
+        action = np.asarray(data['action'], dtype=np.float32)
+        action = action[..., :self.action_dim]
+        if self.clip:
+            action = np.clip(action, -1.0, 1.0)
+        return action
+
+
 @DATASETS.register_module()
 class RobocasaEvalDataset:
     """RoboCasa eval dataset wrapper.
@@ -433,12 +453,15 @@ class RobocasaEvalDataset:
         norm_stats: Normalization statistics path or dict.
         unnorm_key: Key inside the statistics dict.
         transforms: Transform config list.
+        extra_tensor_keys: Additional transform outputs to place in the model
+            batch as tensors, such as Cosmos3 conditioning metadata.
     """
 
     def __init__(self,
                  norm_stats: Any = None,
                  unnorm_key: str = 'robocasa_gr1_test',
                  transforms: List[Dict] = None,
+                 extra_tensor_keys: Optional[List[str]] = None,
                  **kwargs) -> None:
         from fluxvla.engines import build_transform_from_cfg
 
@@ -446,6 +469,7 @@ class RobocasaEvalDataset:
             build_transform_from_cfg(t) for t in (transforms or [])
         ]
         self.unnorm_key = unnorm_key
+        self.extra_tensor_keys = extra_tensor_keys or []
         # In grouped evaluation this is set per task by RobocasaEvalRunner.
         self._active_stats_blob: Optional[Dict] = None
         self.last_raw_state: Optional[np.ndarray] = None
@@ -532,6 +556,10 @@ class RobocasaEvalDataset:
             lang_masks=torch.tensor(token_mask).unsqueeze(0).cuda(),
         )
 
+        if data.get('image_grid_thw', None) is not None:
+            batch['image_grid_thw'] = torch.as_tensor(
+                data['image_grid_thw']).unsqueeze(0)
+
         if 'states' in data:
             batch['states'] = torch.from_numpy(
                 data['states']).bfloat16().cuda().unsqueeze(0)
@@ -553,5 +581,16 @@ class RobocasaEvalDataset:
         else:
             batch['embodiment_ids'] = torch.zeros(
                 bsz, dtype=torch.long, device=dev)
+
+        # Cosmos3 evaluation needs scalar action metadata (for example the
+        # conditioning FPS) in addition to the common image/text fields. Keep
+        # this opt-in so existing PI0.5 and GR00T RoboCasa configs preserve
+        # their exact inference inputs.
+        for key in self.extra_tensor_keys:
+            if key in batch or key not in data or data[key] is None:
+                continue
+            value = torch.as_tensor(data[key], device=dev)
+            batch[key] = (
+                value.view(1) if value.ndim == 0 else value.unsqueeze(0))
 
         return batch, replay_img

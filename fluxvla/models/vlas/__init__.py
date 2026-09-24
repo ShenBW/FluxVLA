@@ -23,6 +23,7 @@ import_heterogeneous_runtime_symbols(
     {
         'arm_reward_model': ['ARMRewardModel'],
         'dit4dit_vla': ['DiT4DiTVLA'],
+        'groot_n17_vla': ['GrootN17VLA'],
         'pi0_flowmatching': ['PI0FlowMatching'],
         'pi05_flowmatching': ['PI05FlowMatching'],
         'pi05_flowmatching_inference': ['PI05FlowMatchingInference'],
@@ -33,5 +34,7 @@ import_heterogeneous_runtime_symbols(
         'dreamzero_vla': ['DreamZeroVLA'],
         'fastwam_vla': ['FastWAMVLA'],
         'cosmos3_flowmatching': ['Cosmos3FlowMatching'],
+        'openai_responses_vla':
+        ['OpenAIResponsesVLA', 'OpenAIResponsesRobocasaVLA'],
     },
 )

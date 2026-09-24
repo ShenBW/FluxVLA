@@ -30,33 +30,11 @@ import tqdm
 from safetensors.torch import load_file
 
 from fluxvla.engines.utils import initialize_overwatch
-from fluxvla.engines.utils.name_map import str_to_dtype
 from fluxvla.engines.utils.torch_utils import set_seed_everywhere
 from ..utils.root import RUNNERS
 from .base_eval_runner import BaseEvalRunner
 
 overwatch = initialize_overwatch(__name__)
-
-# Split RoboCasa GR1 29D actions into the dict format required by env.step.
-# FluxVLA converted data order: left_arm + left_hand + right_arm + right_hand
-# + waist.
-ROBOCASA_FLUXVLA_ACTION_KEYS = {
-    'action.left_arm': (0, 7),  # left arm, 7D
-    'action.left_hand': (7, 13),  # left hand, 6D
-    'action.right_arm': (13, 20),  # right arm, 7D
-    'action.right_hand': (20, 26),  # right hand, 6D
-    'action.waist': (26, 29),  # waist, 3D
-}
-
-# Official GR00T N1.5 fourier_gr1_arms_waist order:
-# left_arm + right_arm + left_hand + right_hand + waist.
-ROBOCASA_N15_ACTION_KEYS = {
-    'action.left_arm': (0, 7),  # left arm, 7D
-    'action.right_arm': (7, 14),  # right arm, 7D
-    'action.left_hand': (14, 20),  # left hand, 6D
-    'action.right_hand': (20, 26),  # right hand, 6D
-    'action.waist': (26, 29),  # waist, 3D
-}
 
 
 @RUNNERS.register_module()
@@ -71,6 +49,13 @@ class RobocasaEvalRunner(BaseEvalRunner):
         task_list: RoboCasa Gymnasium environment names.
         dataset: Evaluation dataset config.
         denormalize_action: Action denormalization transform config.
+        requires_dataset_stats: Whether missing dataset statistics should fail
+            runner construction. Disable this for policies that directly emit
+            native RoboCasa actions.
+        model_build_device: Optional device passed to the eval model config
+            before construction. API-hosted policies can use ``cpu``.
+        model_build_dtype: Optional dtype passed to the eval model config
+            before construction.
         eval_chunk_size: Number of predicted actions executed per step.
         max_episode_steps: Maximum number of environment steps per episode.
         num_trials_per_task: Number of trials for each task.
@@ -86,8 +71,9 @@ class RobocasaEvalRunner(BaseEvalRunner):
             ``<output_dir>/eval_runs/<ckpt>/<run_id>`` to match LIBERO.
         save_video: Whether to save rollout videos.
         rollout_video_key: Observation image key used for rollout videos.
-        action_order: Action split order. Defaults to ``n15`` for GR00T and
-            ``fluxvla`` otherwise.
+        action_order: Optional action-order label used in evaluation reports.
+        action_keys: Config-defined mapping from RoboCasa environment action
+            keys to ``(start, end)`` slices in the policy action vector.
         norm_stats_path: Optional explicit dataset statistics path.
         grouped_norm_stats: Whether to load one statistics file per group.
         norm_stats_group_names: Per-task group names for grouped statistics.
@@ -122,7 +108,11 @@ class RobocasaEvalRunner(BaseEvalRunner):
                  rollout_video_key: Optional[str] = (
                      'video.ego_view_pad_res256_freq20'),
                  norm_stats_path: Optional[str] = None,
+                 requires_dataset_stats: bool = True,
+                 model_build_device: Optional[str] = None,
+                 model_build_dtype=None,
                  action_order: Optional[str] = None,
+                 action_keys: Optional[Dict[str, List[int]]] = None,
                  grouped_norm_stats: bool = False,
                  norm_stats_group_names: Optional[List[str]] = None,
                  deterministic_env: bool = True,
@@ -132,12 +122,23 @@ class RobocasaEvalRunner(BaseEvalRunner):
                  result_gpu_id: Optional[int] = None,
                  **kwargs):
         from fluxvla.engines import (build_dataset_from_cfg,
-                                     build_transform_from_cfg)
+                                     build_transform_from_cfg,
+                                     build_vla_from_cfg)
 
-        self.device_id = overwatch.local_rank()
+        self.set_common_eval_attrs(cfg, seed, ckpt_path, model_family,
+                                   mixed_precision_dtype,
+                                   enable_mixed_precision_training)
+        if (model_build_device is not None
+                and str(model_build_device).startswith('cuda')
+                and torch.cuda.is_available()):
+            torch.cuda.set_device(self.device_id)
 
         # Build model.
-        self.vla = self.build_eval_vla(cfg)
+        model_cfg = self.prepare_eval_model_cfg(
+            cfg,
+            model_build_device=model_build_device,
+            model_build_dtype=model_build_dtype)
+        self.vla = build_vla_from_cfg(model_cfg).eval()
 
         # Load checkpoint weights.
         if ckpt_path is not None:
@@ -181,17 +182,20 @@ class RobocasaEvalRunner(BaseEvalRunner):
             # - official GR00T-N1.5-3B uses source prefixes and needs mapping
             # - FluxVLA-trained checkpoints already use model-native prefixes
             # This keeps PI0.5, LIBERO, and fine-tuned GR00T paths compatible.
-            model_cfg = (
+            checkpoint_model_cfg = (
                 cfg.model if hasattr(cfg, 'model') else cfg.inference_model)
-            if 'name_mapping' in model_cfg and model_cfg['name_mapping']:
+            if ('name_mapping' in checkpoint_model_cfg
+                    and checkpoint_model_cfg['name_mapping']):
                 # model_cfg.name_mapping keys are model-native prefixes, while
                 # values are external checkpoint source prefixes. Fine-tuned
                 # checkpoints are already native and must not be remapped.
                 def _has_prefix(key: str, prefix: str) -> bool:
                     return key == prefix or key.startswith(f'{prefix}.')
 
-                model_prefixes = list(model_cfg['name_mapping'].keys())
-                ckpt_prefixes = list(model_cfg['name_mapping'].values())
+                model_prefixes = list(
+                    checkpoint_model_cfg['name_mapping'].keys())
+                ckpt_prefixes = list(
+                    checkpoint_model_cfg['name_mapping'].values())
                 has_native_keys = any(
                     any(_has_prefix(k, p) for k in state_dict.keys())
                     for p in model_prefixes)
@@ -205,7 +209,7 @@ class RobocasaEvalRunner(BaseEvalRunner):
                         'applying name_mapping...')
                     mapped_state_dict = {}
                     for model_key, ckpt_key in \
-                            model_cfg['name_mapping'].items():
+                            checkpoint_model_cfg['name_mapping'].items():
                         for k, v in state_dict.items():
                             if _has_prefix(k, ckpt_key):
                                 new_key = model_key + k[len(ckpt_key):]
@@ -227,13 +231,18 @@ class RobocasaEvalRunner(BaseEvalRunner):
 
             self.vla.load_state_dict(state_dict, strict=True)
 
-        self.cfg = cfg
-        self.seed = seed
-        self.ckpt_path = ckpt_path
-        self.output_dir = output_dir
+        self.output_dir = (
+            str(Path(output_dir).expanduser().resolve())
+            if output_dir is not None else None)
         self.grouped_norm_stats = grouped_norm_stats
         self.norm_stats_group_names = norm_stats_group_names or []
-        work_dir = Path(self.ckpt_path).resolve().parent.parent
+        self.requires_dataset_stats = bool(requires_dataset_stats)
+        self.model_build_device = model_build_device
+        self.model_build_dtype = self._resolve_model_build_dtype(
+            model_build_dtype)
+        work_dir = (
+            Path(self.ckpt_path).resolve().parent.parent
+            if self.ckpt_path is not None else None)
 
         # Statistics can come from an explicit path, a default file, or groups.
         if norm_stats_path is not None and self.grouped_norm_stats:
@@ -241,6 +250,9 @@ class RobocasaEvalRunner(BaseEvalRunner):
                              'grouped_norm_stats')
 
         if self.grouped_norm_stats:
+            assert work_dir is not None, (
+                'grouped_norm_stats requires a checkpoint-relative work '
+                'directory.')
             assert len(self.norm_stats_group_names) == len(task_list), (
                 'norm_stats_group_names must have the same length as '
                 'task_list')
@@ -269,10 +281,16 @@ class RobocasaEvalRunner(BaseEvalRunner):
         else:
             data_stat_path = (
                 str(Path(norm_stats_path).expanduser().resolve())
-                if norm_stats_path is not None else os.path.join(
-                    work_dir, 'dataset_statistics.json'))
-            assert os.path.exists(data_stat_path), \
-                f'dataset_statistics.json not found at {data_stat_path}'
+                if norm_stats_path is not None else
+                os.path.join(work_dir, 'dataset_statistics.json')
+                if work_dir is not None else None)
+            if self.requires_dataset_stats:
+                assert data_stat_path is not None, (
+                    'norm_stats_path or ckpt_path is required for this '
+                    'RoboCasa evaluation config.')
+            if data_stat_path is not None:
+                assert os.path.exists(data_stat_path), \
+                    f'dataset_statistics.json not found at {data_stat_path}'
             denormalize_action['norm_stats'] = data_stat_path
             dataset['norm_stats'] = data_stat_path
             dataset['unnorm_key'] = unnorm_key
@@ -291,26 +309,19 @@ class RobocasaEvalRunner(BaseEvalRunner):
                     f'evaluation invalid. Current transforms: '
                     f'{transform_names}')
 
-        self.eval_chunk_size = eval_chunk_size
+        self.eval_chunk_size = int(eval_chunk_size)
+        if self.eval_chunk_size <= 0:
+            raise ValueError('eval_chunk_size must be positive, got '
+                             f'{self.eval_chunk_size}.')
         self.model_family = model_family
-        if action_order is None:
-            action_order = 'n15' if model_family == 'groot' else 'fluxvla'
-        if action_order not in ('fluxvla', 'n15'):
-            raise ValueError(f'Unsupported action_order={action_order}. '
-                             "Expected 'fluxvla' or 'n15'.")
-        self.action_keys = (
-            ROBOCASA_N15_ACTION_KEYS
-            if action_order == 'n15' else ROBOCASA_FLUXVLA_ACTION_KEYS)
-        self.action_order = action_order
+        self.action_keys = self._validate_action_keys(action_keys)
+        self.action_order = action_order or 'config'
         self.task_list = task_list
         self.max_episode_steps = max_episode_steps
         self.num_trials_per_task = num_trials_per_task
         self.task_ids = task_ids
         self.eval_shard_strategy = eval_shard_strategy
-        self.mixed_precision_dtype = str_to_dtype(mixed_precision_dtype)
-        self.enable_mixed_precision_training = enable_mixed_precision_training
         self.unnorm_key = unnorm_key
-        self.distributed_state = overwatch.distributed_state
 
         if 'save_rollout_videos' in kwargs:
             save_video = self._coerce_bool(kwargs['save_rollout_videos'])
@@ -319,7 +330,9 @@ class RobocasaEvalRunner(BaseEvalRunner):
         self.deterministic_env = deterministic_env
         self.deterministic_action_sampling = deterministic_action_sampling
         self.run_id_suffix = run_id_suffix
-        self.result_output_dir = result_output_dir
+        self.result_output_dir = (
+            str(Path(result_output_dir).expanduser().resolve())
+            if result_output_dir is not None else None)
         self.result_gpu_id = (
             self.device_id if result_gpu_id is None else int(result_gpu_id))
 
@@ -327,7 +340,7 @@ class RobocasaEvalRunner(BaseEvalRunner):
         if self.grouped_norm_stats:
             first_g = self.norm_stats_group_names[0]
             self.vla.norm_stats = self._stats_full_by_group[first_g]
-        elif os.path.isfile(data_stat_path):
+        elif data_stat_path is not None and os.path.isfile(data_stat_path):
             with open(data_stat_path, 'r') as f:
                 self.vla.norm_stats = json.load(f)
 
@@ -342,6 +355,62 @@ class RobocasaEvalRunner(BaseEvalRunner):
         if isinstance(value, str):
             return value.strip().lower() in ('1', 'true', 'yes', 'y', 'on')
         return bool(value)
+
+    def _get_action_stats_horizon(self) -> Optional[int]:
+        getter = getattr(self._active_denorm, 'get_action_stats_horizon', None)
+        return getter() if callable(getter) else None
+
+    @staticmethod
+    def _validate_action_horizons(eval_chunk_size: int,
+                                  model_output_horizon: int,
+                                  action_stats_horizon: Optional[int]) -> None:
+        if eval_chunk_size > model_output_horizon:
+            raise ValueError(
+                f'eval_chunk_size={eval_chunk_size} exceeds model output '
+                f'horizon={model_output_horizon}. Regenerating action '
+                'statistics alone cannot make the model produce additional '
+                'actions. Reduce eval_chunk_size, or increase the model '
+                'action_horizon and retrain/adapt the checkpoint.')
+        if (action_stats_horizon is not None
+                and eval_chunk_size > action_stats_horizon):
+            raise ValueError(
+                f'eval_chunk_size={eval_chunk_size} exceeds action '
+                f'statistics horizon={action_stats_horizon}, while model '
+                f'output horizon={model_output_horizon} is sufficient. '
+                'Regenerate horizon-dependent action statistics with at least '
+                f'{eval_chunk_size} rows before executing this chunk.')
+
+    @staticmethod
+    def _validate_action_keys(
+            action_keys: Optional[Dict[str, List[int]]]) -> Dict[str, tuple]:
+        if not action_keys:
+            raise ValueError(
+                'action_keys must be provided by the RoboCasa eval config.')
+        normalized = {}
+        intervals = []
+        for key, bounds in action_keys.items():
+            if not isinstance(key, str) or not key:
+                raise ValueError(
+                    f'RoboCasa action key must be a non-empty string: {key!r}')
+            if not isinstance(bounds, (list, tuple)) or len(bounds) != 2:
+                raise ValueError(
+                    f'action_keys[{key!r}] must be a (start, end) pair.')
+            start, end = (int(bounds[0]), int(bounds[1]))
+            if start < 0 or end <= start:
+                raise ValueError(
+                    f'Invalid action slice for {key!r}: {(start, end)}')
+            normalized[key] = (start, end)
+            intervals.append((start, end, key))
+
+        intervals.sort()
+        for (_, previous_end,
+             previous_key), (current_start, _,
+                             current_key) in zip(intervals, intervals[1:]):
+            if current_start < previous_end:
+                raise ValueError(
+                    f'Overlapping action slices for {previous_key!r} and '
+                    f'{current_key!r}.')
+        return normalized
 
     def _get_rollout_video_keys(self) -> List[str]:
         """Return candidate obs image keys for stable rollout videos."""
@@ -388,15 +457,35 @@ class RobocasaEvalRunner(BaseEvalRunner):
         torch.cuda.manual_seed_all(seed)
 
     def run_setup(self):
-        """Initialize CUDA placement and model state."""
+        """Initialize model placement and state."""
         set_seed_everywhere(self.seed)
-        torch.cuda.set_device(self.device_id)
+        # Keep CUDA collectives rank-local even when the API-backed model is
+        # intentionally built and executed on CPU.
+        if torch.cuda.is_available():
+            torch.cuda.set_device(self.device_id)
         self.vla.eval()
         self.vla.freeze_vision_backbone = True
         self.vla.freeze_llm_backbone = True
         self.vla.freeze_projector = True
         self.vla.freeze_vlm_backbone = True
-        self.vla.cuda(self.device_id)
+        if self.model_build_device == 'cpu':
+            self.vla.to(device='cpu')
+            return
+
+        # Preserve the historical checkpoint-evaluation behavior unless the
+        # config explicitly requests a construction-time device or dtype.
+        # ``enable_mixed_precision_training`` controls autocast below; it must
+        # not implicitly cast every model parameter to BF16 because some
+        # policies intentionally keep selected flow modules in FP32.
+        if self.model_build_device is None and self.model_build_dtype is None:
+            self.vla.cuda(self.device_id)
+            return
+
+        target_device = self.model_build_device or self.device_id
+        to_kwargs = dict(device=target_device)
+        if self.model_build_dtype is not None:
+            to_kwargs['dtype'] = self.model_build_dtype
+        self.vla.to(**to_kwargs)
 
     @staticmethod
     def _format_duration(seconds: float) -> str:
@@ -512,14 +601,19 @@ class RobocasaEvalRunner(BaseEvalRunner):
         return run_id
 
     @staticmethod
-    def _build_ckpt_tag(ckpt_path: str) -> str:
+    def _build_ckpt_tag(ckpt_path: str,
+                        inference_tag: Optional[str] = None) -> str:
         """Stable per-checkpoint folder name for grouping eval runs."""
+        if ckpt_path is None:
+            tag = str(inference_tag or 'inference-only')
+            return tag.replace('/', '-').replace('\\', '-')
         return Path(ckpt_path).resolve().stem
 
     @staticmethod
     def _build_run_dir(ckpt_path: str,
                        run_id: str,
-                       output_dir: Optional[str] = None) -> str:
+                       output_dir: Optional[str] = None,
+                       inference_tag: Optional[str] = None) -> str:
         """Per-checkpoint, per-run output directory.
 
         This mirrors ``LiberoEvalRunner`` so RoboCasa and LIBERO eval outputs
@@ -527,11 +621,14 @@ class RobocasaEvalRunner(BaseEvalRunner):
         """
         if output_dir is not None:
             root = Path(output_dir).expanduser().resolve()
+        elif ckpt_path is None:
+            root = Path('work_dirs').resolve()
         else:
             root = Path(ckpt_path).resolve().parent.parent
-        return os.path.join(root, 'eval_runs',
-                            RobocasaEvalRunner._build_ckpt_tag(ckpt_path),
-                            run_id)
+        return os.path.join(
+            root, 'eval_runs',
+            RobocasaEvalRunner._build_ckpt_tag(
+                ckpt_path, inference_tag=inference_tag), run_id)
 
     def _write_robocasa_summary_artifacts(self, run_dir: Path, run_id: str,
                                           task_successes, task_episodes,
@@ -758,7 +855,10 @@ class RobocasaEvalRunner(BaseEvalRunner):
         if output_root is None:
             output_root = self.result_output_dir
         self.run_dir = self._build_run_dir(
-            self.ckpt_path, run_id, output_dir=output_root)
+            self.ckpt_path,
+            run_id,
+            output_dir=output_root,
+            inference_tag=self.model_family)
         os.makedirs(self.run_dir, exist_ok=True)
         log_filepath = os.path.join(self.run_dir, f'rank{rank}.txt')
         log_file = open(log_filepath, 'w', encoding='utf-8', buffering=1)
@@ -771,14 +871,14 @@ class RobocasaEvalRunner(BaseEvalRunner):
         log_file.write(f'Task ids: {task_ids}\n')
         log_file.write(f'Eval shard strategy: {self.eval_shard_strategy}\n')
 
-        total_episodes = torch.zeros(1, device=torch.cuda.current_device())
-        total_successes = torch.zeros(1, device=torch.cuda.current_device())
-        task_successes = torch.zeros(
-            num_tasks, device=torch.cuda.current_device())
-        task_episodes = torch.zeros(
-            num_tasks, device=torch.cuda.current_device())
-        task_durations = torch.zeros(
-            num_tasks, device=torch.cuda.current_device())
+        reduction_device = (
+            torch.device('cuda', torch.cuda.current_device())
+            if torch.cuda.is_available() else torch.device('cpu'))
+        total_episodes = torch.zeros(1, device=reduction_device)
+        total_successes = torch.zeros(1, device=reduction_device)
+        task_successes = torch.zeros(num_tasks, device=reduction_device)
+        task_episodes = torch.zeros(num_tasks, device=reduction_device)
+        task_durations = torch.zeros(num_tasks, device=reduction_device)
 
         pbar = None
         if rank == 0:
@@ -789,8 +889,7 @@ class RobocasaEvalRunner(BaseEvalRunner):
 
         for idx in range(num_local_episodes):
             if idx >= len(local_episodes):
-                step_tensor = torch.zeros(
-                    1, device=torch.cuda.current_device())
+                step_tensor = torch.zeros(1, device=reduction_device)
             else:
                 local_id = local_episodes[idx]
                 task_id = local_id // self.num_trials_per_task
@@ -847,6 +946,7 @@ class RobocasaEvalRunner(BaseEvalRunner):
                 while t < self.max_episode_steps:
                     # Build input dict for the dataset transform pipeline.
                     obs['task_description'] = task_desc
+                    obs['is_new_episode'] = (t == 0)
                     batch, _ = self.dataset(obs)
                     debug_info = getattr(self.dataset, 'last_debug', {})
                     if t == 0:
@@ -875,16 +975,41 @@ class RobocasaEvalRunner(BaseEvalRunner):
                     with torch.autocast(
                             'cuda',
                             dtype=self.mixed_precision_dtype,
-                            enabled=self.enable_mixed_precision_training):
+                            enabled=(self.enable_mixed_precision_training
+                                     and self.model_build_device != 'cpu')):
                         with torch.no_grad():
                             actions = self.vla.predict_action(**batch)
 
-                    # actions shape: (1, chunk_size, max_action_dim)
-                    if len(actions.shape) == 3:
-                        actions = actions[
-                            0, :self.eval_chunk_size, :].cpu().numpy()
+                    # actions shape: (1, model_horizon, action_dim)
+                    if actions.ndim == 3:
+                        if actions.shape[0] != 1:
+                            raise ValueError(
+                                'RoboCasa evaluation requires action batch '
+                                f'size 1, got shape {tuple(actions.shape)}.')
+                        model_output_horizon = int(actions.shape[1])
+                    elif actions.ndim == 2:
+                        if actions.shape[0] != 1:
+                            raise ValueError(
+                                'RoboCasa single-action output requires batch '
+                                f'size 1, got shape {tuple(actions.shape)}.')
+                        model_output_horizon = 1
                     else:
-                        actions = actions[0, None, :].cpu().numpy()
+                        raise ValueError(
+                            'Expected predicted actions with shape [1, T, D] '
+                            f'or [1, D], got {tuple(actions.shape)}.')
+
+                    action_stats_horizon = self._get_action_stats_horizon()
+                    self._validate_action_horizons(
+                        self.eval_chunk_size,
+                        model_output_horizon,
+                        action_stats_horizon,
+                    )
+                    # (1, H, D) or (1, D) -> (H, D), float32 NumPy.
+                    if actions.ndim == 3:
+                        actions = actions[0, :self.eval_chunk_size, :]
+                    else:
+                        actions = actions[0, None, :]
+                    actions = actions.detach().float().cpu().numpy()
 
                     if t == 0:
                         action_min = format(actions.min(), '.6g')
@@ -899,16 +1024,19 @@ class RobocasaEvalRunner(BaseEvalRunner):
                                        f'max={action_max}, '
                                        f'mean={action_mean}\n')
 
-                    # Execute one action chunk.
-                    for action in actions:
-                        # Denormalize from [-1, 1] to raw joint positions.
+                    raw_state = getattr(self.dataset, 'last_raw_state', None)
+
+                    # Execute one action chunk. Horizon-dependent statistics
+                    # are indexed relative to this newly predicted chunk.
+                    for chunk_index, action in enumerate(actions):
                         denorm_input = dict(
                             action=action,
+                            action_horizon_index=chunk_index,
                             task_suite_name=self.unnorm_key,
                         )
-                        raw_state = getattr(self.dataset, 'last_raw_state',
-                                            None)
                         if raw_state is not None:
+                            # Every delta in the chunk is relative to the same
+                            # state snapshot used for this policy prediction.
                             denorm_input['state'] = raw_state
                         action_denormed = self._active_denorm(denorm_input)
 
@@ -925,6 +1053,11 @@ class RobocasaEvalRunner(BaseEvalRunner):
                         # Split 29D action into RoboCasa's dict action format.
                         action_dict = {}
                         for key, (start, end) in self.action_keys.items():
+                            if end > action_denormed.shape[-1]:
+                                raise ValueError(
+                                    f'Action slice {(start, end)} for {key!r} '
+                                    f'exceeds action width '
+                                    f'{action_denormed.shape[-1]}.')
                             action_dict[key] = action_denormed[start:end]
 
                         # Step the environment.
@@ -987,7 +1120,7 @@ class RobocasaEvalRunner(BaseEvalRunner):
                         overwatch.warning(f'  Video save failed: {e}')
 
                 env.close()
-                step_tensor = torch.ones(1, device=torch.cuda.current_device())
+                step_tensor = torch.ones(1, device=reduction_device)
 
             # Distributed synchronization.
             dist.barrier()

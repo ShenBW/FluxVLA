@@ -62,6 +62,7 @@ class ParquetDataset(Dataset):
                  repeat_to_full_length: bool = False,
                  expose_index: bool = False,
                  supervise_terminal_padding: bool = False,
+                 action_dtype: Optional[str] = 'float32',
                  expected_dataset_version: Optional[str] = None) -> None:
         """Initialize the Parquet dataset.
 
@@ -114,6 +115,10 @@ class ParquetDataset(Dataset):
                 used to pad a window past the episode boundary remain valid in
                 the loss mask. OpenPI/LeRobot supervises these repeated hold
                 actions. Defaults to False for backward compatibility.
+            action_dtype (str, optional): NumPy dtype applied while assembling
+                action windows. Set to None to preserve the source values'
+                inferred dtype until downstream normalization. Defaults to
+                ``'float32'`` for backward compatibility.
             expected_dataset_version (str, optional): Expected FluxVLA dataset
                 content version. If omitted, no version check is performed so
                 existing local datasets remain usable.
@@ -122,6 +127,8 @@ class ParquetDataset(Dataset):
         if not 0 < train_episode_fraction <= 1:
             raise ValueError('train_episode_fraction must be in (0, 1].')
         self.action_window_size = action_window_size
+        self.action_dtype = (None if action_dtype is None else
+                             np.dtype(action_dtype))
         if isinstance(data_root_path, str):
             data_root_path = [data_root_path]
         self.data_root_path = data_root_path
@@ -352,6 +359,10 @@ class ParquetDataset(Dataset):
                 == self.dataset[index]['episode_index']
                 and self._get_dataset_index(index) == dataset_idx)
 
+    def _stack_actions(self, actions) -> np.ndarray:
+        """Assemble an action window using the configured source dtype."""
+        return np.array(actions, dtype=self.action_dtype)
+
     def __getitem__(self, index, dataset_statistics):
         index = self._resolve_index(index)
         data = self.dataset[index]
@@ -418,7 +429,7 @@ class ParquetDataset(Dataset):
 
         data['info'] = self.info[dataset_idx]
         data['stats'] = dataset_statistics[self.statistic_name]
-        data['actions'] = np.array(actions, dtype=np.float32)
+        data['actions'] = self._stack_actions(actions)
         data['action_masks'] = np.array(action_masks, dtype=np.float32)
         if self.expose_index:
             data['index'] = np.array(index, dtype=np.int64)
@@ -619,6 +630,9 @@ class PrivateInferenceDataset:
         statistic_name (str): Key of ``norm_stats`` holding the statistics
             the model was trained with (the training ``statistic_name``).
             Defaults to 'private'.
+        inject_model_path (bool): Whether to add model_path to transform
+            configs that do not define it. Disable this for pipelines whose
+            transforms use explicit component paths. Defaults to True.
     """
 
     def __init__(self,
@@ -632,13 +646,15 @@ class PrivateInferenceDataset:
                  use_quantiles=True,
                  embodiment_id: int = None,
                  extra_tensor_keys: Optional[List[str]] = None,
-                 statistic_name: str = 'private') -> None:
+                 statistic_name: str = 'private',
+                 inject_model_path: bool = True) -> None:
         from fluxvla.engines import build_transform_from_cfg
         self.statistic_name = str(statistic_name)
         self.transforms = list()
         for transform in transforms:
             transform = dict(transform)
-            transform.setdefault('model_path', model_path)
+            if inject_model_path:
+                transform.setdefault('model_path', model_path)
             self.transforms.append(build_transform_from_cfg(transform))
         if isinstance(norm_stats, str):
             with open(norm_stats, 'r', encoding='utf-8') as f:
@@ -676,20 +692,19 @@ class PrivateInferenceDataset:
             inputs = transform(inputs)
 
         batch = dict(
-            images=torch.from_numpy(
-                inputs['images']).unsqueeze(0).cuda(),  # noqa: E501
+            images=_batched_cuda_tensor(inputs['images']),
             img_masks=torch.tensor([[True for _ in range(len(self.img_keys))]
                                     ]).cuda(),  # noqa: E501
-            lang_tokens=torch.from_numpy(
-                inputs['lang_tokens']).unsqueeze(0).cuda(),
-            lang_masks=torch.from_numpy(
-                inputs['lang_masks']).unsqueeze(0).cuda(),
-            states=torch.from_numpy(
-                inputs['states']).float().cuda().unsqueeze(0))
+            lang_tokens=_batched_cuda_tensor(inputs['lang_tokens']),
+            lang_masks=_batched_cuda_tensor(inputs['lang_masks']),
+            states=_batched_cuda_tensor(inputs['states']).float())
         if 'embodiment_ids' in inputs:
-            batch['embodiment_ids'] = torch.from_numpy(
-                np.asarray(inputs['embodiment_ids'])).int().cuda().unsqueeze(0)
+            batch['embodiment_ids'] = _batched_cuda_tensor(
+                inputs['embodiment_ids']).int()
         _add_tensor_fields(batch, inputs, self.extra_tensor_keys)
+        if inputs.get('image_grid_thw', None) is not None:
+            batch['image_grid_thw'] = _batched_cuda_tensor(
+                inputs['image_grid_thw'])
         return batch
 
     def _normalize(self, normalized_states: np.ndarray, stats: Dict):
